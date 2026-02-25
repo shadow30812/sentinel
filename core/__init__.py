@@ -1,4 +1,7 @@
-# Sentinel Core Module
+"""
+Core algorithms and data structures for Sentinel.
+"""
+
 from .anomaly import RiskAccumulator, calculate_severity
 from .contamination import is_contaminated
 from .drift import DriftDetector, calculate_divergence

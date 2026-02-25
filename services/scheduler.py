@@ -1,17 +1,30 @@
+"""
+Execution scheduler for the Sentinel engine.
+"""
+
 import threading
 import time
+import traceback
 from typing import Callable
 
 
 class EngineScheduler:
+    """Schedules the execution of engine callbacks at a precise frequency."""
+
     def __init__(self, tick_callback: Callable, hz: float = 1.0):
+        """Initializes the scheduler.
+
+        Args:
+            tick_callback (Callable): The function to call on each tick.
+            hz (float, optional): The frequency of execution in Hertz. Defaults to 1.0.
+        """
         self.tick_callback = tick_callback
         self.interval = 1.0 / hz
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
 
     def start(self):
-        """Starts the background 1 Hz scheduling loop."""
+        """Starts the background scheduling loop."""
         if self._thread is not None and self._thread.is_alive():
             return
 
@@ -22,26 +35,21 @@ class EngineScheduler:
         self._thread.start()
 
     def stop(self):
-        """Signals the loop to stop and joins the thread."""
+        """Signals the loop to stop and waits for thread completion."""
         self._stop_event.set()
         if self._thread is not None:
             self._thread.join(timeout=2.0)
 
     def _run_loop(self):
-        """The precision execution loop."""
+        """Executes the precision timing loop."""
         while not self._stop_event.is_set():
             start_time = time.monotonic()
 
-            # Execute the engine pipeline
             try:
                 self.tick_callback()
-            except Exception as e:
-                # We catch bare exceptions here to ensure the background thread never dies silently
-                import traceback
-
+            except Exception:
                 traceback.print_exc()
 
-            # Delta-corrected sleep to maintain exact 1 Hz cadence
             elapsed = time.monotonic() - start_time
             sleep_time = self.interval - elapsed
 

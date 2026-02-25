@@ -1,3 +1,7 @@
+"""
+Numerical stability routines for covariance matrices.
+"""
+
 import numpy as np
 
 from config import defaults
@@ -9,14 +13,28 @@ MAX_CONDITION_NUMBER = defaults.CONDITION_NUMBER
 def apply_regularization(
     cov: np.ndarray, epsilon: float = DEFAULT_EPSILON
 ) -> np.ndarray:
-    """Adds epsilon to the diagonal of the covariance matrix."""
+    """Adds epsilon to the diagonal of the covariance matrix.
+
+    Args:
+        cov (np.ndarray): The original covariance matrix.
+        epsilon (float, optional): The regularization term. Defaults to DEFAULT_EPSILON.
+
+    Returns:
+        np.ndarray: The regularized covariance matrix.
+    """
     return cov + np.eye(cov.shape[0]) * epsilon
 
 
 def check_condition_number(cov: np.ndarray) -> float:
-    """Computes the condition number of a matrix."""
+    """Computes the condition number of a matrix.
+
+    Args:
+        cov (np.ndarray): The matrix to evaluate.
+
+    Returns:
+        float: The computed condition number, or infinity if singular.
+    """
     try:
-        # Use 2-norm condition number
         return np.linalg.cond(cov)
     except np.linalg.LinAlgError:
         return float("inf")
@@ -25,9 +43,14 @@ def check_condition_number(cov: np.ndarray) -> float:
 def safe_invert(
     cov: np.ndarray, base_epsilon: float = DEFAULT_EPSILON
 ) -> tuple[np.ndarray, bool, float]:
-    """
-    Attempts to safely invert the covariance matrix.
-    Returns: (inverse_matrix, is_frozen, applied_epsilon)
+    """Attempts to safely invert the covariance matrix.
+
+    Args:
+        cov (np.ndarray): The covariance matrix to invert.
+        base_epsilon (float, optional): The initial epsilon for regularization. Defaults to DEFAULT_EPSILON.
+
+    Returns:
+        tuple[np.ndarray, bool, float]: A tuple containing the inverse matrix, a boolean freeze flag, and the applied epsilon.
     """
     current_eps = base_epsilon
     max_retries = 5
@@ -43,8 +66,6 @@ def safe_invert(
             except np.linalg.LinAlgError:
                 pass
 
-        # Scale epsilon aggressively if unstable
         current_eps *= 10.0
 
-    # If all retries fail, return pseudo-inverse and flag to freeze updates
     return np.linalg.pinv(apply_regularization(cov, base_epsilon)), True, base_epsilon

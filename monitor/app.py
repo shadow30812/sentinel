@@ -1,10 +1,15 @@
+"""
+Main application UI and process manager.
+"""
+
+import os
 import subprocess
 import sys
 import time
 from typing import Any, Dict
 
 from PySide6.QtCore import Qt, QThread, Signal, Slot
-from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtGui import QIcon, QKeySequence, QShortcut
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import (
     QApplication,
@@ -30,6 +35,7 @@ class EngineWorker(QThread):
     data_emitted = Signal(dict)
 
     def __init__(self):
+        """Initializes the engine worker thread."""
         super().__init__()
         self.engine = SentinelEngine(
             ui_callback=lambda data: self.data_emitted.emit(data)
@@ -37,9 +43,11 @@ class EngineWorker(QThread):
         self.scheduler = EngineScheduler(tick_callback=self.engine.tick, hz=1.0)
 
     def run(self):
+        """Starts the scheduler within the thread."""
         self.scheduler.start()
 
     def stop(self):
+        """Stops the scheduler and performs engine shutdown."""
         self.scheduler.stop()
         self.engine.shutdown()
         self.quit()
@@ -47,7 +55,10 @@ class EngineWorker(QThread):
 
 
 class SentinelMainWindow(QMainWindow):
+    """Main window for the Sentinel application UI."""
+
     def __init__(self):
+        """Initializes the UI layout and background services."""
         super().__init__()
         self.setWindowTitle("Sentinel - Adaptive Monitoring")
         self.resize(800, 600)
@@ -56,7 +67,6 @@ class SentinelMainWindow(QMainWindow):
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
 
-        # --- UI Elements ---
         self.status_label = QLabel("Initializing...")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status_label.setStyleSheet("font-size: 18px; font-weight: bold;")
@@ -72,7 +82,6 @@ class SentinelMainWindow(QMainWindow):
         self.layout.addWidget(self.metrics_label)
         self.layout.addWidget(self.plotter)
 
-        # --- Retraining Controls ---
         self.retrain_layout = QHBoxLayout()
 
         self.retrain_combo = QComboBox()
@@ -89,7 +98,6 @@ class SentinelMainWindow(QMainWindow):
         self.retrain_layout.addWidget(self.btn_retrain)
         self.layout.addLayout(self.retrain_layout)
 
-        # --- Action Buttons ---
         self.button_layout = QHBoxLayout()
 
         self.btn_hide = QPushButton("Minimize to Background (Hide)")
@@ -105,15 +113,11 @@ class SentinelMainWindow(QMainWindow):
         self.button_layout.addWidget(self.btn_quit)
         self.layout.addLayout(self.button_layout)
 
-        # --- IPC Server (Daemon Wake-Up) ---
         self.server = QLocalServer(self)
-        self.server.removeServer(
-            "sentinel_ipc"
-        )  # Clean up stale sockets from crashed runs
+        self.server.removeServer("sentinel_ipc")
         self.server.listen("sentinel_ipc")
         self.server.newConnection.connect(self.handle_wake_up)
 
-        # --- Background Worker Setup ---
         self.worker = EngineWorker()
         self.worker.data_emitted.connect(self.update_ui)
         self.worker.start()
@@ -121,12 +125,9 @@ class SentinelMainWindow(QMainWindow):
         self._is_force_quitting = False
         self.last_alarm_time = 0.0
 
-        # --- Keyboard Shortcuts ---
-        # 1. 'A' for Auto-scale
         self.shortcut_a = QShortcut(QKeySequence(Qt.Key.Key_A), self)
         self.shortcut_a.activated.connect(self.plotter.plot_widget.enableAutoRange)
 
-        # 2. 'Ctrl+Q' for Force Quit
         self.shortcut_quit = QShortcut(QKeySequence("Ctrl+Q"), self)
         self.shortcut_quit.activated.connect(self.force_quit)
 
@@ -134,7 +135,6 @@ class SentinelMainWindow(QMainWindow):
         """Called when a new instance of Sentinel tries to start."""
         socket = self.server.nextPendingConnection()
         socket.waitForReadyRead()
-        # Bring the hidden window back to the front
         self.showNormal()
         self.raise_()
         self.activateWindow()
@@ -146,12 +146,15 @@ class SentinelMainWindow(QMainWindow):
         minutes = int(text.split()[0])
         seconds = minutes * 60
 
-        # Trigger the engine running in the background thread
         self.worker.engine.trigger_retraining(seconds)
 
     @Slot(dict)
     def update_ui(self, state: Dict[str, Any]):
-        """Runs on the Main UI Thread, triggered by the background worker."""
+        """Runs on the Main UI Thread, triggered by the background worker.
+
+        Args:
+            state (Dict[str, Any]): A dictionary containing the UI update payload.
+        """
         mode = state.get("mode")
 
         if mode == "training":
@@ -193,7 +196,6 @@ class SentinelMainWindow(QMainWindow):
     def _play_linux_alarm(self):
         """Attempts to play a native Linux warning sound without blocking the UI."""
         try:
-            # Try PulseAudio / PipeWire first (Standard on Ubuntu/Fedora)
             subprocess.Popen(
                 ["paplay", "/usr/share/sounds/freedesktop/stereo/dialog-warning.oga"],
                 stderr=subprocess.DEVNULL,
@@ -201,21 +203,24 @@ class SentinelMainWindow(QMainWindow):
             )
         except FileNotFoundError:
             try:
-                # Fallback to ALSA if paplay isn't installed
                 subprocess.Popen(
                     ["aplay", "/usr/share/sounds/alsa/Front_Center.wav"],
                     stderr=subprocess.DEVNULL,
                     stdout=subprocess.DEVNULL,
                 )
             except FileNotFoundError:
-                pass  # If no audio subsystems are found, fail silently rather than crashing
+                pass
 
     def hide_to_background(self):
         """Hides the GUI but keeps the monitoring thread running."""
         self.hide()
 
     def closeEvent(self, event):
-        """Intercept the OS 'X' button to hide instead of killing the engine."""
+        """Intercept the OS 'X' button to hide instead of killing the engine.
+
+        Args:
+            event (QCloseEvent): The window close event.
+        """
         if not self._is_force_quitting:
             event.ignore()
             self.hide_to_background()
@@ -230,12 +235,21 @@ class SentinelMainWindow(QMainWindow):
 
 
 def run_application():
+    """Initializes and runs the PyQt application."""
     app = QApplication(sys.argv)
+    app.setApplicationName("Sentinel")
+    app.setDesktopFileName("sentinel.desktop")
 
-    # Allow the app to stay alive even when the window is hidden
     app.setQuitOnLastWindowClosed(False)
 
-    # --- Check if Sentinel is already running in the background ---
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    icon_path = os.path.join(base_dir, "assets", "icon.png")
+
+    if os.path.exists(icon_path):
+        app.setWindowIcon(QIcon(icon_path))
+    else:
+        print(f"Warning: Icon not found at {icon_path}")
+
     socket = QLocalSocket()
     socket.connectToServer("sentinel_ipc")
     if socket.waitForConnected(500):
@@ -243,7 +257,7 @@ def run_application():
         socket.write(b"wake")
         socket.flush()
         socket.disconnectFromServer()
-        sys.exit(0)  # Exit this new instance, let the background one take over
+        sys.exit(0)
 
     window = SentinelMainWindow()
     window.show()

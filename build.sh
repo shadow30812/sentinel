@@ -1,13 +1,11 @@
 #!/bin/bash
 
-# Exit immediately if a command exits with a non-zero status
 set -e
 
 echo "========================================"
 echo "  Building Sentinel via Nuitka"
 echo "========================================"
 
-# 1. Check for the icon
 ICON_PATH="assets/icon.png"
 if [ ! -f "$ICON_PATH" ]; then
     echo "⚠️  Warning: Icon not found at $ICON_PATH."
@@ -18,8 +16,10 @@ else
     ICON_FLAG="--linux-icon=$ICON_PATH"
 fi
 
-# 2. Run Nuitka Compilation
 echo "🚀 Starting Nuitka compilation. This may take a few minutes..."
+
+EXCLUDES="--nofollow-import-to=scipy --nofollow-import-to=pandas --nofollow-import-to=matplotlib --nofollow-import-to=tkinter"
+
 python3 -m nuitka \
     --onefile \
     --lto=no \
@@ -29,6 +29,7 @@ python3 -m nuitka \
     --include-package=pyqtgraph \
     --include-module=PySide6.QtOpenGL \
     --include-module=PySide6.QtOpenGLWidgets \
+    --include-data-dir=assets=assets \
     $EXCLUDES \
     $ICON_FLAG \
     --output-dir=build \
@@ -38,30 +39,25 @@ python3 -m nuitka \
 
 echo "✅ Compilation successful!"
 
+EXECUTABLE_PATH="$(pwd)/build/Sentinel"
+
 if command -v strip &> /dev/null && [ -f "$EXECUTABLE_PATH" ]; then
     echo "🗜️ Stripping debug symbols to reduce size..."
     strip -s "$EXECUTABLE_PATH"
 fi
 
-# 3. Create Linux Desktop Integration
 echo "🖥️  Installing Desktop Shortcut..."
 
-# Standard Linux user directories for local apps and icons
 APP_DIR="$HOME/.local/share/applications"
 ICON_DIR="$HOME/.local/share/icons"
 
 mkdir -p "$APP_DIR"
 mkdir -p "$ICON_DIR"
 
-# Copy the icon to the system icons folder so the OS can find it
 if [ -f "$ICON_PATH" ]; then
-    cp "$ICON_PATH" "$ICON_DIR/icon.png"
+    cp "$ICON_PATH" "$ICON_DIR/sentinel.png"
 fi
 
-# Resolve the absolute path to the newly compiled binary
-EXECUTABLE_PATH="$(pwd)/build/main.dist/main"
-
-# Write the .desktop file
 cat <<EOF > "$APP_DIR/sentinel.desktop"
 [Desktop Entry]
 Version=1.0
@@ -74,7 +70,6 @@ Type=Application
 Categories=System;Monitor;Utility;
 EOF
 
-# Update desktop database so the app drawer refreshes immediately
 update-desktop-database "$APP_DIR" || true
 
 echo "========================================"

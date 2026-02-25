@@ -1,3 +1,7 @@
+"""
+Utility for atomic file writing.
+"""
+
 import contextlib
 import os
 import tempfile
@@ -6,15 +10,22 @@ from pathlib import Path
 
 @contextlib.contextmanager
 def atomic_write(filepath: str | Path, mode: str = "w", encoding: str | None = "utf-8"):
-    """
-    Context manager for atomic file writes.
-    Yields a temporary file; on success, atomically replaces the target file.
+    """Context manager for atomic file writes.
+
+    Args:
+        filepath (str | Path): The destination path for the file.
+        mode (str, optional): The file open mode. Defaults to "w".
+        encoding (str | None, optional): The file encoding. Defaults to "utf-8".
+
+    Yields:
+        io.TextIOWrapper | io.BufferedWriter: The temporary file object to write to.
+
+    Raises:
+        Exception: Re-raises any exception encountered during the file write.
     """
     path = Path(filepath)
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Create temp file in the same directory to ensure they are on the same filesystem
-    # (os.replace across different filesystems is not atomic)
     fd, temp_path = tempfile.mkstemp(dir=path.parent, prefix=f".tmp_{path.name}_")
 
     try:
@@ -25,7 +36,6 @@ def atomic_write(filepath: str | Path, mode: str = "w", encoding: str | None = "
             with open(fd, mode, encoding=encoding) as f:
                 yield f
 
-        # Atomic replace
         os.replace(temp_path, path)
     except Exception as e:
         os.remove(temp_path)

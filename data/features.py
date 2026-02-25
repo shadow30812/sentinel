@@ -1,8 +1,11 @@
+"""
+Feature vector generation from raw metrics.
+"""
+
 from typing import Dict
 
 import numpy as np
 
-# Hardcoded feature order to ensure deterministic vector construction
 FEATURE_KEYS = [
     "cpu_percent",
     "ram_percent",
@@ -15,9 +18,16 @@ FEATURE_KEYS = [
 
 
 def build_feature_vector(metrics: Dict[str, float]) -> np.ndarray:
-    """
-    Converts a metrics dictionary into a strict numpy array vector x_t.
-    Ensures dimension d <= 10 constraint is met.
+    """Converts a metrics dictionary into a strict numpy array vector.
+
+    Args:
+        metrics (Dict[str, float]): The incoming metrics dictionary.
+
+    Returns:
+        np.ndarray: A feature vector representation of the metrics.
+
+    Raises:
+        ValueError: If the resulting feature vector exceeds dimension length 10.
     """
     vector_data = []
     for key in FEATURE_KEYS:
@@ -25,7 +35,6 @@ def build_feature_vector(metrics: Dict[str, float]) -> np.ndarray:
 
     x_t = np.array(vector_data, dtype=np.float64)
 
-    # Assert hard constraint d <= 10
     if len(x_t) > 10:
         raise ValueError(f"Feature vector dimension {len(x_t)} exceeds maximum of 10.")
 

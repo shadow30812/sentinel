@@ -1,3 +1,7 @@
+"""
+Main entry point for the Sentinel application.
+"""
+
 import logging
 import sys
 
@@ -6,7 +10,11 @@ from monitor.app import run_application
 
 
 def setup_main_logging():
-    """Configures global logging for the Sentinel process."""
+    """Configures global logging for the Sentinel process.
+
+    Returns:
+        logging.Logger: The configured main logger instance.
+    """
     paths.BASE_DIR.mkdir(parents=True, exist_ok=True)
     log_file = paths.BASE_DIR / "sentinel_main.log"
 
@@ -22,10 +30,7 @@ def setup_main_logging():
 
 
 def main():
-    """
-    Sentinel - Adaptive Streaming Multivariate Statistical Monitoring System
-    Main Entry Point
-    """
+    """Starts the Sentinel Application Pipeline."""
     logger = setup_main_logging()
     logger.info("==================================================")
     logger.info("Starting Sentinel Application Pipeline...")
