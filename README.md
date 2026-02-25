@@ -229,31 +229,11 @@ chmod +x build.sh
 ./build.sh
 ```
 
-The build script automates a complex compilation pipeline to transform Python scripts into a highly portable, native executable, performing the following operations:
+The build script automates a complex compilation pipeline to transform Python scripts into a highly portable, native executable.
 
-### Asset Validation
+A pre-compiled and optimised version of the binary is available in the releases section of the GitHub page. You may choose to use it for the sake of convenience, but it may not run equally well on all distributions of Linux. It is compiled and tested on Ubuntu 24.04.02 LTS with Linux Kernel 6.8.0-94-generic on an x86_64 architecture machine.
 
-Validates the existence and integrity of application icons and UI assets before attempting compilation.
-
-### C-Level Compilation
-
-Invokes Nuitka to translate the entire Python codebase into pure C code, which is then compiled into a single, highly optimized execution binary.
-
-This provides a massive performance boost over standard interpreted Python and drastically reduces startup times compared to basic bundlers like PyInstaller.
-
-### Targeted Exclusion
-
-It intentionally excludes large, unnecessary scientific modules (like pandas and matplotlib) that are often bundled by default by underlying mathematical dependencies.
-
-By aggressively pruning these, it effectively minimizes binary bloat and keeps the memory footprint exceptionally low.
-
-### Symbol Stripping
-
-Strips debug symbols from the final compiled binary to further reduce the payload size and obfuscate the executable.
-
-### Desktop Integration
-
-Automatically generates and installs a standard Linux `.desktop` file locally in `~/.local/share/applications`, allowing for immediate system integration, application drawer searchability, and easy pinning to your taskbar or application dock.
+At the time of writing this README, the latest pre-compiled binary is available on [this](https://github.com/shadow30812/sentinel/releases/download/v1.0/Sentinel) page of the GitHub repository.
 
 ---
 
@@ -303,3 +283,7 @@ By clicking the hide button (or closing the window via your OS window manager), 
 If you know your system is about to enter a completely new, sustained workload (e.g., starting a massive 3D rendering job, compiling a huge codebase, or launching a demanding game), you can use the UI dropdown to manually trigger a retraining phase.
 
 This intentionally flushes the old models, forcing Sentinel to establish a new, temporary baseline tailored specifically to the current intensive state, ensuring you aren't bombarded with false alarms during expected heavy usage.
+
+## Licensing
+
+This project is open-source and licensed under the terms specified in the LICENSE file within this repository.
